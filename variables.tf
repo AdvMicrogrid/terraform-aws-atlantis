@@ -274,6 +274,12 @@ variable "atlantis_github_user_token_ssm_parameter_name" {
   default     = "/atlantis/github/user/token"
 }
 
+variable "atlantis_github_app_key_ssm_parameter_name" {
+  description = "Name of SSM parameter to keep atlantis_github_app_key"
+  type        = string
+  default     = "/atlantis/github/app/key"
+}
+
 variable "atlantis_gitlab_user_token_ssm_parameter_name" {
   description = "Name of SSM parameter to keep atlantis_gitlab_user_token"
   type        = string
@@ -578,6 +584,18 @@ variable "atlantis_github_user" {
 
 variable "atlantis_github_user_token" {
   description = "GitHub token of the user that is running the Atlantis command"
+  type        = string
+  default     = ""
+}
+
+variable "atlantis_github_app_id" {
+  description = "GitHub id of the app that is running the Atlantis command"
+  type        = string
+  default     = ""
+}
+
+variable "atlantis_github_app_key" {
+  description = "GitHub key pem of the app that is running the Atlantis command"
   type        = string
   default     = ""
 }
