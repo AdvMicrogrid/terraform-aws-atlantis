@@ -211,8 +211,9 @@ allow_github_webhooks        = true
 ## Notes
 
 1. AWS Route53 zone is not created by this module, so zone specified as a value in `route53_zone_name` should be created before using this module. Check documentation for [aws_route53_zone](https://www.terraform.io/docs/providers/aws/r/route53_zone.html).
-1. Currently this module configures Atlantis in a way that it can not be used to work with GitHub and Gitlab simultaneously (can't make list of ECS secrets conditionally).
-1. For Bitbucket Cloud webhook configuration follow instructions in [the official Atlantis documentation](https://www.runatlantis.io/docs/configuring-webhooks.html#bitbucket-cloud-bitbucket-org-webhook).
+2. Currently this module configures Atlantis in a way that it can not be used to work with GitHub and Gitlab simultaneously (can't make list of ECS secrets conditionally).
+3. For Bitbucket Cloud webhook configuration follow instructions in [the official Atlantis documentation](https://www.runatlantis.io/docs/configuring-webhooks.html#bitbucket-cloud-bitbucket-org-webhook).
+4. Added a gpg key ssm param and secret for task definition
 
 <!-- TODO: For Bitbucket Cloud an IP whitelist should be implemented for the webhook url as stated in [the official Atlantis documentation](https://www.runatlantis.io/docs/security.html#bitbucket-cloud-bitbucket-org) due to lack of support for webhook secrets. -->
 
@@ -315,6 +316,8 @@ allow_github_webhooks        = true
 | <a name="input_atlantis_github_app_id"></a> [atlantis\_github\_app\_id](#input\_atlantis\_github\_app\_id) | GitHub id of the app that is running the Atlantis command | `string` | `""` | no |
 | <a name="input_atlantis_github_app_key"></a> [atlantis\_github\_app\_key](#input\_atlantis\_github\_app\_key) | GitHub key pem of the app that is running the Atlantis command | `string` | `""` | no |
 | <a name="input_atlantis_github_app_key_ssm_parameter_name"></a> [atlantis\_github\_app\_key\_ssm\_parameter\_name](#input\_atlantis\_github\_app\_key\_ssm\_parameter\_name) | Name of SSM parameter to keep atlantis\_github\_app\_key | `string` | `"/atlantis/github/app/key"` | no |
+| <a name="input_atlantis_gpg_secret"></a> [atlantis\_gpg\_secret](#input\_atlantis\_gpg\_secret) | GPG Key for running git-crypt commands | `string` | `""` | no |
+| <a name="input_atlantis_gpg_ssm_parameter_name"></a> [atlantis\_gpg\ ssm\_parameter\_name](#input\_atlantis\_gpg\_ssm\_parameter\_name) | Name of SSM parameter to keep atlantis\_gpg\_key | `string` | `"/atlantis/gpg/key"` | no |
 | <a name="input_atlantis_github_user"></a> [atlantis\_github\_user](#input\_atlantis\_github\_user) | GitHub username that is running the Atlantis command | `string` | `""` | no |
 | <a name="input_atlantis_github_user_token"></a> [atlantis\_github\_user\_token](#input\_atlantis\_github\_user\_token) | GitHub token of the user that is running the Atlantis command | `string` | `""` | no |
 | <a name="input_atlantis_github_user_token_ssm_parameter_name"></a> [atlantis\_github\_user\_token\_ssm\_parameter\_name](#input\_atlantis\_github\_user\_token\_ssm\_parameter\_name) | Name of SSM parameter to keep atlantis\_github\_user\_token | `string` | `"/atlantis/github/user/token"` | no |

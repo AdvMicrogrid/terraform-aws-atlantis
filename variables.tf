@@ -268,6 +268,12 @@ variable "webhook_ssm_parameter_name" {
   default     = "/atlantis/webhook/secret"
 }
 
+variable "atlantis_gpg_ssm_parameter_name" {
+  description = "Name of SSM parameter to keep gpg key"
+  type        = string
+  default     = "/atlantis/gpg/secret"
+}
+
 variable "atlantis_github_user_token_ssm_parameter_name" {
   description = "Name of SSM parameter to keep atlantis_github_user_token"
   type        = string
@@ -584,6 +590,12 @@ variable "atlantis_github_user" {
 
 variable "atlantis_github_user_token" {
   description = "GitHub token of the user that is running the Atlantis command"
+  type        = string
+  default     = ""
+}
+
+variable "atlantis_gpg_secret" {
+  description = "GPG secret"
   type        = string
   default     = ""
 }
