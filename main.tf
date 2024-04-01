@@ -684,6 +684,7 @@ module "container_definition_github_gitlab" {
   secrets = concat(
     local.container_definition_secrets_1,
     local.container_definition_secrets_2,
+    local.container_definition_secrets_3,
     var.custom_environment_secrets,
   )
 }
