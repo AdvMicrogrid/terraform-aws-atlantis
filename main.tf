@@ -198,6 +198,7 @@ resource "aws_ssm_parameter" "atlantis_gpg_key" {
   name  = var.atlantis_gpg_ssm_parameter_name
   type  = "SecureString"
   value = var.atlantis_gpg_secret
+  tier  = "Advanced"
 
   tags = local.tags
 }
