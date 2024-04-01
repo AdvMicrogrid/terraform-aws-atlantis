@@ -109,6 +109,14 @@ locals {
     },
   ] : []
 
+  # GPG Key Secret
+  container_definition_secrets_3 = [
+    {
+      name      = "ATLANTIS_GPG_KEY"
+      valueFrom = var.atlantis_gpg_ssm_parameter_name
+    },
+  ]
+
   tags = merge(
     {
       "Name" = var.name
@@ -182,6 +190,15 @@ resource "aws_ssm_parameter" "atlantis_github_app_key" {
   name  = var.atlantis_github_app_key_ssm_parameter_name
   type  = "SecureString"
   value = var.atlantis_github_app_key
+
+  tags = local.tags
+}
+
+resource "aws_ssm_parameter" "atlantis_gpg_key" {
+  name  = var.atlantis_gpg_ssm_parameter_name
+  type  = "SecureString"
+  value = var.atlantis_gpg_secret
+  tier  = "Advanced"
 
   tags = local.tags
 }
@@ -573,6 +590,7 @@ data "aws_iam_policy_document" "ecs_task_access_secrets" {
       aws_ssm_parameter.atlantis_gitlab_user_token.*.arn,
       aws_ssm_parameter.atlantis_bitbucket_user_token.*.arn,
       aws_ssm_parameter.atlantis_github_app_key.*.arn,
+      aws_ssm_parameter.atlantis_gpg_key.*.arn
     ])
 
     actions = [
@@ -666,6 +684,7 @@ module "container_definition_github_gitlab" {
   secrets = concat(
     local.container_definition_secrets_1,
     local.container_definition_secrets_2,
+    local.container_definition_secrets_3,
     var.custom_environment_secrets,
   )
 }
