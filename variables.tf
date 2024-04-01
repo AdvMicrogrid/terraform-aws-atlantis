@@ -578,7 +578,7 @@ variable "atlantis_log_level" {
 variable "atlantis_hide_prev_plan_comments" {
   description = "Enables atlantis server --hide-prev-plan-comments hiding previous plan comments on update"
   type        = string
-  default     = "false"
+  default     = "true"
 }
 
 # Github
