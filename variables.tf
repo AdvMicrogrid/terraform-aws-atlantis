@@ -751,7 +751,7 @@ variable "runtime_platform" {
 variable "internal_alb_ingress_cidr_blocks" {
   description = "List of IPv4 CIDR ranges for internal ALB ingress rules."
   type        = list(string)
-  default     = ["10.1.0.0/8"]
+  default     = ["10.4.0.0/16"]
 }
 variable "create_internal_route53_record" {
   description = "Whether to create a Route53 record for the internal ALB."
