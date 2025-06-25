@@ -252,29 +252,28 @@ module "vpc" {
 }
 
 ################################################################################
-# ALB
+# Public ALB
 ################################################################################
-module "alb" {
+module "alb_public" {
   source  = "terraform-aws-modules/alb/aws"
   version = "v6.5.0"
 
-  name     = var.name
-  internal = var.internal
+  name     = "${var.name}-public"
+  internal = false
 
   vpc_id          = local.vpc_id
   subnets         = local.public_subnet_ids
-  security_groups = flatten([module.alb_https_sg.security_group_id, module.alb_http_sg.security_group_id, var.security_group_ids])
+  security_groups = flatten([module.alb_public_https_sg.security_group_id, module.alb_public_http_sg.security_group_id])
 
   access_logs = {
     enabled = var.alb_logging_enabled
     bucket  = var.alb_log_bucket_name
-    prefix  = var.alb_log_location_prefix
+    prefix  = "${var.alb_log_location_prefix}/public"
   }
 
   ip_address_type = var.alb_ip_address_type
 
   enable_deletion_protection = var.alb_enable_deletion_protection
-
   drop_invalid_header_fields = var.alb_drop_invalid_header_fields
 
   listener_ssl_policy_default = var.alb_listener_ssl_policy_default
@@ -305,7 +304,7 @@ module "alb" {
 
   target_groups = [
     {
-      name                 = var.name
+      name                 = "${var.name}-public"
       backend_protocol     = "HTTP"
       backend_port         = var.atlantis_port
       target_type          = "ip"
@@ -319,116 +318,129 @@ module "alb" {
   tags = local.tags
 }
 
-# Forward action for certain CIDR blocks to bypass authentication (eg. GitHub webhooks)
-resource "aws_lb_listener_rule" "unauthenticated_access_for_cidr_blocks" {
-  count = var.allow_unauthenticated_access ? length(local.whitelist_unauthenticated_cidr_block_chunks) : 0
-
-  listener_arn = module.alb.https_listener_arns[0]
-  priority     = var.allow_unauthenticated_access_priority + count.index
-
-  action {
-    type             = "forward"
-    target_group_arn = module.alb.target_group_arns[0]
-  }
-
-  condition {
-    source_ip {
-      values = local.whitelist_unauthenticated_cidr_block_chunks[count.index]
-    }
-  }
-}
-
-# Forward action for certain URL paths to bypass authentication (eg. GitHub webhooks)
-resource "aws_lb_listener_rule" "unauthenticated_access_for_webhook" {
-  count = var.allow_unauthenticated_access && var.allow_github_webhooks ? 1 : 0
-
-  listener_arn = module.alb.https_listener_arns[0]
-  priority     = var.allow_unauthenticated_webhook_access_priority
-
-  action {
-    type             = "forward"
-    target_group_arn = module.alb.target_group_arns[0]
-  }
-
-  condition {
-    path_pattern {
-      values = ["/events"]
-    }
-  }
-}
-
 ################################################################################
-# Security groups
+# Internal ALB
 ################################################################################
-module "alb_https_sg" {
-  source  = "terraform-aws-modules/security-group/aws//modules/https-443"
-  version = "v4.3.0"
+module "alb_internal" {
+  source  = "terraform-aws-modules/alb/aws"
+  version = "v6.5.0"
 
-  name        = "${var.name}-alb-https"
-  vpc_id      = local.vpc_id
-  description = "Security group with HTTPS ports open for specific IPv4 CIDR block (or everybody), egress ports are all world open"
+  name     = "${var.name}-internal"
+  internal = true
 
-  ingress_cidr_blocks      = sort(compact(concat(var.allow_github_webhooks ? var.github_webhooks_cidr_blocks : [], var.alb_ingress_cidr_blocks)))
-  ingress_ipv6_cidr_blocks = sort(compact(concat(var.allow_github_webhooks ? var.github_webhooks_ipv6_cidr_blocks : [], var.alb_ingress_ipv6_cidr_blocks)))
+  vpc_id          = local.vpc_id
+  subnets         = local.private_subnet_ids
+  security_groups = flatten([module.alb_internal_https_sg.security_group_id, module.alb_internal_http_sg.security_group_id])
 
-  tags = merge(local.tags, var.alb_https_security_group_tags)
-}
+  access_logs = {
+    enabled = var.alb_logging_enabled
+    bucket  = var.alb_log_bucket_name
+    prefix  = "${var.alb_log_location_prefix}/internal"
+  }
 
-module "alb_http_sg" {
-  source  = "terraform-aws-modules/security-group/aws//modules/http-80"
-  version = "v4.3.0"
+  ip_address_type = var.alb_ip_address_type
 
-  name        = "${var.name}-alb-http"
-  vpc_id      = local.vpc_id
-  description = "Security group with HTTP ports open for specific IPv4 CIDR block (or everybody), egress ports are all world open"
+  enable_deletion_protection = var.alb_enable_deletion_protection
+  drop_invalid_header_fields = var.alb_drop_invalid_header_fields
 
-  ingress_cidr_blocks      = sort(compact(concat(var.allow_github_webhooks ? var.github_webhooks_cidr_blocks : [], var.alb_ingress_cidr_blocks)))
-  ingress_ipv6_cidr_blocks = sort(compact(concat(var.allow_github_webhooks ? var.github_webhooks_ipv6_cidr_blocks : [], var.alb_ingress_ipv6_cidr_blocks)))
-
-  tags = merge(local.tags, var.alb_http_security_group_tags)
-}
-
-module "atlantis_sg" {
-  source  = "terraform-aws-modules/security-group/aws"
-  version = "v4.3.0"
-
-  name        = var.name
-  vpc_id      = local.vpc_id
-  description = "Security group with open port for Atlantis (${var.atlantis_port}) from ALB, egress ports are all world open"
-
-  ingress_with_source_security_group_id = [
+  listener_ssl_policy_default = var.alb_listener_ssl_policy_default
+  https_listeners = [
     {
-      from_port                = var.atlantis_port
-      to_port                  = var.atlantis_port
-      protocol                 = "tcp"
-      description              = "Atlantis"
-      source_security_group_id = module.alb_https_sg.security_group_id
+      target_group_index   = 0
+      port                 = 443
+      protocol             = "HTTPS"
+      certificate_arn      = var.certificate_arn == "" ? module.acm.acm_certificate_arn : var.certificate_arn
+      action_type          = "forward"
     },
   ]
 
-  egress_rules = ["all-all"]
+  http_tcp_listeners = [
+    {
+      port        = 80
+      protocol    = "HTTP"
+      action_type = "redirect"
+      redirect = {
+        port        = 443
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
+    },
+  ]
 
-  tags = merge(local.tags, var.atlantis_security_group_tags)
-}
-
-module "efs_sg" {
-  source  = "terraform-aws-modules/security-group/aws//modules/nfs"
-  version = "v4.8.0"
-  count   = var.enable_ephemeral_storage ? 0 : 1
-
-  name        = "${var.name}-efs"
-  vpc_id      = local.vpc_id
-  description = "Security group allowing access to the EFS storage"
-
-  ingress_cidr_blocks = [var.cidr]
-  ingress_with_source_security_group_id = [{
-    rule                     = "nfs-tcp",
-    source_security_group_id = module.atlantis_sg.security_group_id
-  }]
+  target_groups = [
+    {
+      name                 = "${var.name}-internal"
+      backend_protocol     = "HTTP"
+      backend_port         = var.atlantis_port
+      target_type          = "ip"
+      deregistration_delay = 10
+      health_check = {
+        path = "/healthz"
+      }
+    },
+  ]
 
   tags = local.tags
 }
 
+################################################################################
+# Security Groups for ALBs
+################################################################################
+module "alb_public_https_sg" {
+  source  = "terraform-aws-modules/security-group/aws//modules/https-443"
+  version = "v4.3.0"
+
+  name        = "${var.name}-alb-public-https"
+  vpc_id      = local.vpc_id
+  description = "Security group for public ALB HTTPS"
+
+  ingress_cidr_blocks      = var.alb_ingress_cidr_blocks
+  ingress_ipv6_cidr_blocks = var.alb_ingress_ipv6_cidr_blocks
+
+  tags = merge(local.tags, var.alb_https_security_group_tags)
+}
+
+module "alb_public_http_sg" {
+  source  = "terraform-aws-modules/security-group/aws//modules/http-80"
+  version = "v4.3.0"
+
+  name        = "${var.name}-alb-public-http"
+  vpc_id      = local.vpc_id
+  description = "Security group for public ALB HTTP"
+
+  ingress_cidr_blocks      = var.alb_ingress_cidr_blocks
+  ingress_ipv6_cidr_blocks = var.alb_ingress_ipv6_cidr_blocks
+
+  tags = merge(local.tags, var.alb_http_security_group_tags)
+}
+
+module "alb_internal_https_sg" {
+  source  = "terraform-aws-modules/security-group/aws//modules/https-443"
+  version = "v4.3.0"
+
+  name        = "${var.name}-alb-internal-https"
+  vpc_id      = local.vpc_id
+  description = "Security group for internal ALB HTTPS"
+
+  ingress_cidr_blocks      = var.internal_alb_ingress_cidr_blocks
+  ingress_ipv6_cidr_blocks = var.internal_alb_ingress_ipv6_cidr_blocks
+
+  tags = merge(local.tags, var.alb_https_security_group_tags)
+}
+
+module "alb_internal_http_sg" {
+  source  = "terraform-aws-modules/security-group/aws//modules/http-80"
+  version = "v4.3.0"
+
+  name        = "${var.name}-alb-internal-http"
+  vpc_id      = local.vpc_id
+  description = "Security group for internal ALB HTTP"
+
+  ingress_cidr_blocks      = var.internal_alb_ingress_cidr_blocks
+  ingress_ipv6_cidr_blocks = var.internal_alb_ingress_ipv6_cidr_blocks
+
+  tags = merge(local.tags, var.alb_http_security_group_tags)
+}
 ################################################################################
 # ACM (SSL certificate)
 ################################################################################
@@ -472,6 +484,19 @@ resource "aws_route53_record" "atlantis_aaaa" {
   alias {
     name                   = module.alb.lb_dns_name
     zone_id                = module.alb.lb_zone_id
+    evaluate_target_health = true
+  }
+}
+resource "aws_route53_record" "internal_alb" {
+  count = var.create_internal_route53_record ? 1 : 0
+
+  zone_id = data.aws_route53_zone.this[0].zone_id
+  name    = var.internal_route53_record_name != null ? var.internal_route53_record_name : "${var.name}-internal"
+  type    = "A"
+
+  alias {
+    name                   = module.alb_internal.lb_dns_name
+    zone_id                = module.alb_internal.lb_zone_id
     evaluate_target_health = true
   }
 }
