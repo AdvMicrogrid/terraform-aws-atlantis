@@ -349,7 +349,7 @@ module "alb_internal" {
       target_group_index   = 0
       port                 = 443
       protocol             = "HTTPS"
-      certificate_arn      = var.certificate_arn == "" ? module.acm.acm_certificate_arn : var.certificate_arn
+      certificate_arn      = var.internal_certificate_arn 
       action_type          = "forward"
     },
   ]
@@ -444,15 +444,26 @@ module "alb_internal_http_sg" {
 ################################################################################
 # ACM (SSL certificate)
 ################################################################################
-module "acm" {
+module "acm_public" {
   source  = "terraform-aws-modules/acm/aws"
   version = "v3.2.0"
 
   create_certificate = var.certificate_arn == ""
 
-  domain_name = var.acm_certificate_domain_name == "" ? join(".", [var.name, var.route53_zone_name]) : var.acm_certificate_domain_name
+  domain_name = var.acm_certificate_domain_name
+  zone_id     = data.aws_route53_zone.public_zone.zone_id
 
-  zone_id = var.certificate_arn == "" ? element(concat(data.aws_route53_zone.this.*.id, [""]), 0) : ""
+  tags = local.tags
+}
+
+module "acm_internal" {
+  source  = "terraform-aws-modules/acm/aws"
+  version = "v3.2.0"
+
+  create_certificate = var.internal_certificate_arn == ""
+
+  domain_name = var.internal_acm_certificate_domain_name
+  zone_id     = data.aws_route53_zone.internal_zone.zone_id
 
   tags = local.tags
 }
@@ -460,38 +471,25 @@ module "acm" {
 ################################################################################
 # Route53 records
 ################################################################################
-resource "aws_route53_record" "atlantis" {
+resource "aws_route53_record" "atlantis_public" {
   count = var.create_route53_record ? 1 : 0
 
-  zone_id = data.aws_route53_zone.this[0].zone_id
-  name    = var.route53_record_name != null ? var.route53_record_name : var.name
+  zone_id = data.aws_route53_zone.public_zone.zone_id
+  name    = var.route53_record_name
   type    = "A"
 
   alias {
-    name                   = module.alb.lb_dns_name
-    zone_id                = module.alb.lb_zone_id
+    name                   = module.alb_public.lb_dns_name
+    zone_id                = module.alb_public.lb_zone_id
     evaluate_target_health = true
   }
 }
 
-resource "aws_route53_record" "atlantis_aaaa" {
-  count = var.create_route53_aaaa_record ? 1 : 0
-
-  zone_id = data.aws_route53_zone.this[0].zone_id
-  name    = var.route53_record_name != null ? var.route53_record_name : var.name
-  type    = "AAAA"
-
-  alias {
-    name                   = module.alb.lb_dns_name
-    zone_id                = module.alb.lb_zone_id
-    evaluate_target_health = true
-  }
-}
-resource "aws_route53_record" "internal_alb" {
+resource "aws_route53_record" "atlantis_internal" {
   count = var.create_internal_route53_record ? 1 : 0
 
-  zone_id = data.aws_route53_zone.this[0].zone_id
-  name    = var.internal_route53_record_name != null ? var.internal_route53_record_name : "${var.name}-internal"
+  zone_id = data.aws_route53_zone.internal_zone.zone_id
+  name    = var.internal_route53_record_name
   type    = "A"
 
   alias {
@@ -500,7 +498,6 @@ resource "aws_route53_record" "internal_alb" {
     evaluate_target_health = true
   }
 }
-
 ################################################################################
 # EFS
 ################################################################################

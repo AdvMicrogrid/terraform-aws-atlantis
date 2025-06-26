@@ -764,3 +764,11 @@ variable "internal_route53_record_name" {
   type        = string
   default     = null
 }
+variable "hosted_zone_internal" {
+  description = "Internal hosted zone for Atlantis"
+  type        = string
+}
+variable "internal_acm_certificate_domain_name" {
+  description = "Domain name for internal ACM certificate"
+  type        = string
+}
