@@ -748,16 +748,6 @@ variable "runtime_platform" {
   type        = any
   default     = null
 }
-variable "internal_alb_ingress_cidr_blocks" {
-  description = "List of IPv4 CIDR ranges for internal ALB ingress rules."
-  type        = list(string)
-  default     = ["10.4.0.0/16"]
-}
-variable "internal_route53_record_name" {
-  description = "The name of the Route53 record for the internal ALB."
-  type        = string
-  default     = null
-}
 variable "hosted_zone_internal" {
   description = "Internal hosted zone for Atlantis"
   type        = string
@@ -767,22 +757,11 @@ variable "internal_acm_certificate_domain_name" {
   type        = string
 }
 
-variable "internal_route53_record_name" {
-  description = "Route53 record name for internal ALB"
-  type        = string
-}
-
 variable "internal_alb_ingress_cidr_blocks" {
   description = "List of IPv4 CIDR ranges for internal ALB ingress rules."
   type        = list(string)
   default     = ["10.4.0.0/16"]
 }
-
-variable "hosted_zone_internal" {
-  description = "Internal hosted zone for Atlantis"
-  type        = string
-}
-
 variable "route53_zone_name_internal" {
   description = "Internal Route53 zone name"
   type        = string

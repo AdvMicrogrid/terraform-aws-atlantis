@@ -13,7 +13,7 @@ locals {
 
   atlantis_url_events = "${local.atlantis_url}/events"
 
-   Route53 Records
+  # Route53 Records
   route53_record_public   = "${var.route53_record_name}.${var.route53_zone_name}"
   route53_record_internal = "${var.internal_route53_record_name}.${var.route53_zone_name_internal}"
 
