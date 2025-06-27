@@ -11,12 +11,6 @@ locals {
   atlantis_url_public   = "https://${module.alb_public.lb_dns_name}"
   atlantis_url_internal = "https://${module.alb_internal.lb_dns_name}"
 
-   #atlantis_url = "https://${coalesce(
-   # var.atlantis_fqdn,
-   # element(concat(aws_route53_record.atlantis.*.fqdn, [""]), 0),
-   # module.alb.lb_dns_name,
-   # "_"
-  #)}"
   atlantis_url_events = "${local.atlantis_url}/events"
 
    Route53 Records
@@ -841,10 +835,18 @@ resource "aws_ecs_service" "atlantis" {
     assign_public_ip = var.ecs_service_assign_public_ip
   }
 
+  # Attach the public ALB target group
   load_balancer {
     container_name   = var.name
     container_port   = var.atlantis_port
-    target_group_arn = element(module.alb.target_group_arns, 0)
+    target_group_arn = element(module.alb_public.target_group_arns, 0)
+  }
+
+  # Attach the internal ALB target group
+  load_balancer {
+    container_name   = var.name
+    container_port   = var.atlantis_port
+    target_group_arn = element(module.alb_internal.target_group_arns, 0)
   }
 
   dynamic "load_balancer" {
