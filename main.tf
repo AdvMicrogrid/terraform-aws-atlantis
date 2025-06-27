@@ -284,7 +284,7 @@ module "alb_public" {
 
   vpc_id          = local.vpc_id
   subnets         = local.public_subnet_ids
-  security_groups = [module.alb_public_https_sg.security_group_id, module.alb_public_http_sg.security_group_id]
+  security_groups = flatten([module.alb_public_https_sg.security_group_id, module.alb_public_http_sg.security_group_id])
 
   access_logs = {
     enabled = var.alb_logging_enabled
@@ -349,7 +349,7 @@ module "alb_internal" {
 
   vpc_id          = local.vpc_id
   subnets         = local.private_subnet_ids
-  security_groups = [module.alb_internal_https_sg.security_group_id, module.alb_internal_http_sg.security_group_id]
+  security_groups = flatten([module.alb_internal_https_sg.security_group_id, module.alb_internal_http_sg.security_group_id])
 
   access_logs = {
     enabled = var.alb_logging_enabled
