@@ -14,9 +14,8 @@ locals {
   atlantis_url_events = "${local.atlantis_url_public}/events"
 
   # Route53 Records
-  route53_record_public   = "${var.route53_record_name}.${data.aws_route53_zone.public_zone[count.index].name}"
-  route53_record_internal = "${var.internal_route53_record_name}.${data.aws_route53_zone.internal_zone[count.index].name}"
-
+  route53_record_public   = "${var.route53_record_name}.${data.aws_route53_zone.public_zone[0].name}"
+  route53_record_internal = "${var.internal_route53_record_name}.${data.aws_route53_zone.internal_zone[0].name}"
 
   # Security Groups
   alb_public_security_groups   = [module.alb_public_https_sg.security_group_id, module.alb_public_http_sg.security_group_id]
@@ -285,7 +284,7 @@ module "alb_public" {
 
   vpc_id          = local.vpc_id
   subnets         = local.public_subnet_ids
-  security_groups = flatten([module.alb_public_https_sg.security_group_id, module.alb_public_http_sg.security_group_id])
+  security_groups = [module.alb_public_https_sg.security_group_id, module.alb_public_http_sg.security_group_id]
 
   access_logs = {
     enabled = var.alb_logging_enabled
@@ -350,7 +349,7 @@ module "alb_internal" {
 
   vpc_id          = local.vpc_id
   subnets         = local.private_subnet_ids
-  security_groups = flatten([module.alb_internal_https_sg.security_group_id, module.alb_internal_http_sg.security_group_id])
+  security_groups = [module.alb_internal_https_sg.security_group_id, module.alb_internal_http_sg.security_group_id]
 
   access_logs = {
     enabled = var.alb_logging_enabled
@@ -456,7 +455,7 @@ module "alb_internal_http_sg" {
   description = "Security group for internal ALB HTTP"
 
   ingress_cidr_blocks      = var.internal_alb_ingress_cidr_blocks
-  ingress_ipv6_cidr_blocks = var.internal_alb_ingress_ipv6_cidr_blocks
+  #ingress_ipv6_cidr_blocks = var.internal_alb_ingress_ipv6_cidr_blocks
 
   tags = merge(local.tags, var.alb_http_security_group_tags)
 }
@@ -509,7 +508,7 @@ module "acm_public" {
   create_certificate = var.certificate_arn == ""
 
   domain_name = var.acm_certificate_domain_name
-  zone_id     = data.aws_route53_zone.public_zone.zone_id
+  zone_id     = data.aws_route53_zone.public_zone[0].zone_id
 
   tags = local.tags
 }
@@ -521,7 +520,7 @@ module "acm_internal" {
   create_certificate = var.internal_certificate_arn == ""
 
   domain_name = var.internal_acm_certificate_domain_name
-  zone_id     = data.aws_route53_zone.internal_zone.zone_id
+  zone_id     = data.aws_route53_zone.internal_zone[0].zone_id
 
   tags = local.tags
 }
