@@ -473,7 +473,7 @@ module "atlantis_sg" {
       to_port                  = var.atlantis_port
       protocol                 = "tcp"
       description              = "Atlantis"
-      source_security_group_id = module.alb_pulic_https_sg.security_group_id
+      source_security_group_id = module.alb_public_https_sg.security_group_id
     },
   ]
 
