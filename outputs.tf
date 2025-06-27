@@ -117,3 +117,31 @@ output "alb_https_listeners_arn" {
   description = "ARN of alb https listeners"
   value       = module.alb.https_listener_arns
 }
+output "alb_public_target_group_arn" {
+  description = "ARN of the public ALB target group"
+  value       = element(module.alb_public.target_group_arns, 0)
+}
+
+output "alb_internal_target_group_arn" {
+  description = "ARN of the internal ALB target group"
+  value       = element(module.alb_internal.target_group_arns, 0)
+}
+output "alb_public_dns_name" {
+  description = "DNS name of the public ALB"
+  value       = module.alb_public.lb_dns_name
+}
+
+output "alb_internal_dns_name" {
+  description = "DNS name of the internal ALB"
+  value       = module.alb_internal.lb_dns_name
+}
+
+output "acm_public_certificate_arn" {
+  description = "ARN of the public ACM certificate"
+  value       = module.acm_public.acm_certificate_arn
+}
+
+output "acm_internal_certificate_arn" {
+  description = "ARN of the internal ACM certificate"
+  value       = module.acm_internal.acm_certificate_arn
+}

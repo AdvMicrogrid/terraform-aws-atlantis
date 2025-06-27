@@ -6,13 +6,26 @@ locals {
 
   # Atlantis
   atlantis_image = var.atlantis_image == "" ? "ghcr.io/runatlantis/atlantis:${var.atlantis_version}" : var.atlantis_image
-  atlantis_url = "https://${coalesce(
-    var.atlantis_fqdn,
-    element(concat(aws_route53_record.atlantis.*.fqdn, [""]), 0),
-    module.alb.lb_dns_name,
-    "_"
-  )}"
+  
+   ## Atlantis URLs
+  atlantis_url_public   = "https://${module.alb_public.lb_dns_name}"
+  atlantis_url_internal = "https://${module.alb_internal.lb_dns_name}"
+
+   #atlantis_url = "https://${coalesce(
+   # var.atlantis_fqdn,
+   # element(concat(aws_route53_record.atlantis.*.fqdn, [""]), 0),
+   # module.alb.lb_dns_name,
+   # "_"
+  #)}"
   atlantis_url_events = "${local.atlantis_url}/events"
+
+   Route53 Records
+  route53_record_public   = "${var.route53_record_name}.${var.route53_zone_name}"
+  route53_record_internal = "${var.internal_route53_record_name}.${var.route53_zone_name_internal}"
+
+  # Security Groups
+  alb_public_security_groups   = [module.alb_public_https_sg.security_group_id, module.alb_public_http_sg.security_group_id]
+  alb_internal_security_groups = [module.alb_internal_https_sg.security_group_id, module.alb_internal_http_sg.security_group_id]
 
   # Include only one group of secrets - for github, gitlab or bitbucket
   has_secrets = var.atlantis_gitlab_user_token != "" || var.atlantis_github_user_token != "" || var.atlantis_bitbucket_user_token != "" || var.atlantis_github_app_id != ""
@@ -148,11 +161,25 @@ data "aws_partition" "current" {}
 
 data "aws_region" "current" {}
 
-data "aws_route53_zone" "this" {
+#data "aws_route53_zone" "this" {
+#  count = var.create_route53_record || var.create_route53_aaaa_record ? 1 : 0
+
+# name         = var.route53_zone_name
+# private_zone = var.route53_private_zone
+#}
+
+data "aws_route53_zone" "public_zone" {
   count = var.create_route53_record || var.create_route53_aaaa_record ? 1 : 0
 
   name         = var.route53_zone_name
-  private_zone = var.route53_private_zone
+  private_zone = false
+}
+
+data "aws_route53_zone" "internal_zone" {
+  count = var.create_internal_route53_record ? 1 : 0
+
+  name         = var.route53_zone_name_internal
+  private_zone = true
 }
 
 ################################################################################
@@ -283,9 +310,7 @@ module "alb_public" {
       port                 = 443
       protocol             = "HTTPS"
       certificate_arn      = var.certificate_arn == "" ? module.acm.acm_certificate_arn : var.certificate_arn
-      action_type          = local.alb_authentication_method
-      authenticate_oidc    = var.alb_authenticate_oidc
-      authenticate_cognito = var.alb_authenticate_cognito
+      action_type          = "forward"
     },
   ]
 
@@ -349,8 +374,9 @@ module "alb_internal" {
       target_group_index   = 0
       port                 = 443
       protocol             = "HTTPS"
-      certificate_arn      = var.internal_certificate_arn 
-      action_type          = "forward"
+      certificate_arn      = var.internal_certificate_arn
+      action_type          = "authenticate-oidc"
+      authenticate_oidc    = var.alb_authenticate_oidc
     },
   ]
 
@@ -394,24 +420,10 @@ module "alb_public_https_sg" {
   vpc_id      = local.vpc_id
   description = "Security group for public ALB HTTPS"
 
-  ingress_cidr_blocks      = var.alb_ingress_cidr_blocks
-  ingress_ipv6_cidr_blocks = var.alb_ingress_ipv6_cidr_blocks
+  ingress_cidr_blocks      = var.github_webhooks_cidr_blocks
+  ingress_ipv6_cidr_blocks = var.github_webhooks_ipv6_cidr_blocks
 
   tags = merge(local.tags, var.alb_https_security_group_tags)
-}
-
-module "alb_public_http_sg" {
-  source  = "terraform-aws-modules/security-group/aws//modules/http-80"
-  version = "v4.3.0"
-
-  name        = "${var.name}-alb-public-http"
-  vpc_id      = local.vpc_id
-  description = "Security group for public ALB HTTP"
-
-  ingress_cidr_blocks      = var.alb_ingress_cidr_blocks
-  ingress_ipv6_cidr_blocks = var.alb_ingress_ipv6_cidr_blocks
-
-  tags = merge(local.tags, var.alb_http_security_group_tags)
 }
 
 module "alb_internal_https_sg" {
@@ -428,19 +440,6 @@ module "alb_internal_https_sg" {
   tags = merge(local.tags, var.alb_https_security_group_tags)
 }
 
-module "alb_internal_http_sg" {
-  source  = "terraform-aws-modules/security-group/aws//modules/http-80"
-  version = "v4.3.0"
-
-  name        = "${var.name}-alb-internal-http"
-  vpc_id      = local.vpc_id
-  description = "Security group for internal ALB HTTP"
-
-  ingress_cidr_blocks      = var.internal_alb_ingress_cidr_blocks
-  ingress_ipv6_cidr_blocks = var.internal_alb_ingress_ipv6_cidr_blocks
-
-  tags = merge(local.tags, var.alb_http_security_group_tags)
-}
 ################################################################################
 # ACM (SSL certificate)
 ################################################################################

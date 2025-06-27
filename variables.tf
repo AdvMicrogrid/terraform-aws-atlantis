@@ -753,12 +753,6 @@ variable "internal_alb_ingress_cidr_blocks" {
   type        = list(string)
   default     = ["10.4.0.0/16"]
 }
-variable "create_internal_route53_record" {
-  description = "Whether to create a Route53 record for the internal ALB."
-  type        = bool
-  default     = false
-}
-
 variable "internal_route53_record_name" {
   description = "The name of the Route53 record for the internal ALB."
   type        = string
@@ -771,4 +765,41 @@ variable "hosted_zone_internal" {
 variable "internal_acm_certificate_domain_name" {
   description = "Domain name for internal ACM certificate"
   type        = string
+}
+
+variable "internal_route53_record_name" {
+  description = "Route53 record name for internal ALB"
+  type        = string
+}
+
+variable "internal_alb_ingress_cidr_blocks" {
+  description = "List of IPv4 CIDR ranges for internal ALB ingress rules."
+  type        = list(string)
+  default     = ["10.4.0.0/16"]
+}
+
+variable "hosted_zone_internal" {
+  description = "Internal hosted zone for Atlantis"
+  type        = string
+}
+
+variable "route53_zone_name_internal" {
+  description = "Internal Route53 zone name"
+  type        = string
+}
+
+variable "internal_route53_record_name" {
+  description = "Route53 record name for internal ALB"
+  type        = string
+}
+
+variable "internal_certificate_arn" {
+  description = "ARN of the ACM certificate for the internal ALB"
+  type        = string
+}
+
+variable "create_internal_route53_record" {
+  description = "Flag to create internal Route53 record"
+  type        = bool
+  default     = true
 }
