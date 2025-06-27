@@ -11,11 +11,12 @@ locals {
   atlantis_url_public   = "https://${module.alb_public.lb_dns_name}"
   atlantis_url_internal = "https://${module.alb_internal.lb_dns_name}"
 
-  atlantis_url_events = "${local.atlantis_url}/events"
+  atlantis_url_events = "${local.atlantis_url_public}/events"
 
   # Route53 Records
-  route53_record_public   = "${var.route53_record_name}.${var.route53_zone_name}"
-  route53_record_internal = "${var.internal_route53_record_name}.${var.route53_zone_name_internal}"
+  route53_record_public   = "${var.route53_record_name}.${data.aws_route53_zone.public_zone[count.index].name}"
+  route53_record_internal = "${var.internal_route53_record_name}.${data.aws_route53_zone.internal_zone[count.index].name}"
+
 
   # Security Groups
   alb_public_security_groups   = [module.alb_public_https_sg.security_group_id, module.alb_public_http_sg.security_group_id]
@@ -61,7 +62,7 @@ locals {
     },
     {
       name  = "ATLANTIS_ATLANTIS_URL"
-      value = local.atlantis_url
+      value = local.atlantis_url_public
     },
     {
       name  = "ATLANTIS_GH_USER"
@@ -303,7 +304,7 @@ module "alb_public" {
       target_group_index   = 0
       port                 = 443
       protocol             = "HTTPS"
-      certificate_arn      = var.certificate_arn == "" ? module.acm.acm_certificate_arn : var.certificate_arn
+      certificate_arn      = var.certificate_arn == "" ? module.acm_public.acm_certificate_arn : var.certificate_arn
       action_type          = "forward"
     },
   ]
@@ -420,6 +421,19 @@ module "alb_public_https_sg" {
   tags = merge(local.tags, var.alb_https_security_group_tags)
 }
 
+module "alb_public_http_sg" {
+  source  = "terraform-aws-modules/security-group/aws//modules/https-443"
+  version = "v4.3.0"
+
+  name        = "${var.name}-alb-public-http"
+  vpc_id      = local.vpc_id
+  description = "Security group for public ALB HTTP"
+
+  ingress_cidr_blocks      = var.github_webhooks_cidr_blocks
+  ingress_ipv6_cidr_blocks = var.github_webhooks_ipv6_cidr_blocks
+
+  tags = merge(local.tags, var.alb_http_security_group_tags)
+}
 module "alb_internal_https_sg" {
   source  = "terraform-aws-modules/security-group/aws//modules/https-443"
   version = "v4.3.0"
@@ -429,11 +443,62 @@ module "alb_internal_https_sg" {
   description = "Security group for internal ALB HTTPS"
 
   ingress_cidr_blocks      = var.internal_alb_ingress_cidr_blocks
-  ingress_ipv6_cidr_blocks = var.internal_alb_ingress_ipv6_cidr_blocks
+  #ingress_ipv6_cidr_blocks = var.internal_alb_ingress_ipv6_cidr_blocks
 
   tags = merge(local.tags, var.alb_https_security_group_tags)
 }
+module "alb_internal_http_sg" {
+  source  = "terraform-aws-modules/security-group/aws//modules/https-443"
+  version = "v4.3.0"
 
+  name        = "${var.name}-alb-internal-http"
+  vpc_id      = local.vpc_id
+  description = "Security group for internal ALB HTTP"
+
+  ingress_cidr_blocks      = var.internal_alb_ingress_cidr_blocks
+  ingress_ipv6_cidr_blocks = var.internal_alb_ingress_ipv6_cidr_blocks
+
+  tags = merge(local.tags, var.alb_http_security_group_tags)
+}
+module "atlantis_sg" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "v4.3.0"
+
+  name        = var.name
+  vpc_id      = local.vpc_id
+  description = "Security group with open port for Atlantis (${var.atlantis_port}) from ALB, egress ports are all world open"
+
+  ingress_with_source_security_group_id = [
+    {
+      from_port                = var.atlantis_port
+      to_port                  = var.atlantis_port
+      protocol                 = "tcp"
+      description              = "Atlantis"
+      source_security_group_id = module.alb_pulic_https_sg.security_group_id
+    },
+  ]
+
+  egress_rules = ["all-all"]
+
+  tags = merge(local.tags, var.atlantis_security_group_tags)
+}
+module "efs_sg" {
+  source  = "terraform-aws-modules/security-group/aws//modules/nfs"
+  version = "v4.8.0"
+  count   = var.enable_ephemeral_storage ? 0 : 1
+
+  name        = "${var.name}-efs"
+  vpc_id      = local.vpc_id
+  description = "Security group allowing access to the EFS storage"
+
+  ingress_cidr_blocks = [var.cidr]
+  ingress_with_source_security_group_id = [{
+    rule                     = "nfs-tcp",
+    source_security_group_id = module.atlantis_sg.security_group_id
+  }]
+
+  tags = local.tags
+}
 ################################################################################
 # ACM (SSL certificate)
 ################################################################################
@@ -467,7 +532,7 @@ module "acm_internal" {
 resource "aws_route53_record" "atlantis_public" {
   count = var.create_route53_record ? 1 : 0
 
-  zone_id = data.aws_route53_zone.public_zone.zone_id
+  zone_id = data.aws_route53_zone.public_zone[count.index].zone_id
   name    = var.route53_record_name
   type    = "A"
 
@@ -481,7 +546,7 @@ resource "aws_route53_record" "atlantis_public" {
 resource "aws_route53_record" "atlantis_internal" {
   count = var.create_internal_route53_record ? 1 : 0
 
-  zone_id = data.aws_route53_zone.internal_zone.zone_id
+  zone_id = data.aws_route53_zone.internal_zone[count.index].zone_id
   name    = var.internal_route53_record_name
   type    = "A"
 
