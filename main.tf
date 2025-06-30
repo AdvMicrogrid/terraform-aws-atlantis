@@ -652,11 +652,7 @@ resource "aws_iam_role" "ecs_task_execution" {
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
- #for_each = toset(local.policies_arn)
-   for_each = {
-    policy_1 = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-    policy_2 = aws_iam_policy.atlantis_crossaccount_assume.arn
-  }
+  for_each = toset(local.policies_arn)
 
   role       = aws_iam_role.ecs_task_execution.id
   policy_arn = each.value
