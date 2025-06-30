@@ -652,7 +652,7 @@ resource "aws_iam_role" "ecs_task_execution" {
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
-  for_each = toset(var.policies_arn)
+  for_each = toset(local.policies_arn)
 
   role       = aws_iam_role.ecs_task_execution.id
   policy_arn = each.value
