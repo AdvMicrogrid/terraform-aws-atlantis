@@ -155,12 +155,12 @@ data "aws_partition" "current" {}
 
 data "aws_region" "current" {}
 
-#data "aws_route53_zone" "this" {
-#  count = var.create_route53_record || var.create_route53_aaaa_record ? 1 : 0
-
-# name         = var.route53_zone_name
-# private_zone = var.route53_private_zone
-#}
+/*data "aws_route53_zone" "this" {
+ count = var.create_route53_record || var.create_route53_aaaa_record ? 1 : 0
+ name         = var.route53_zone_name
+ private_zone = var.route53_private_zone
+}
+*/
 
 data "aws_route53_zone" "public_zone" {
   count = var.create_route53_record || var.create_route53_aaaa_record ? 1 : 0
