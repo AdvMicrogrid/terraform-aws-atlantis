@@ -658,11 +658,16 @@ resource "aws_iam_role" "ecs_task_execution" {
   tags = local.tags
 }
 
-resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
-  for_each = toset(local.policies_arn)
+# resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
+#   for_each = toset(local.policies_arn)
 
+#   role       = aws_iam_role.ecs_task_execution.id
+#   policy_arn = each.value
+#}
+resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
+  count      = length(local.policies_arn)
   role       = aws_iam_role.ecs_task_execution.id
-  policy_arn = each.value
+  policy_arn = local.policies_arn[count.index]
 }
 
 # ref: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/specifying-sensitive-data.html
