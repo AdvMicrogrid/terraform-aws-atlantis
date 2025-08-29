@@ -475,6 +475,13 @@ module "atlantis_sg" {
       description              = "Atlantis"
       source_security_group_id = module.alb_public_https_sg.security_group_id
     },
+    {
+      from_port                = var.atlantis_port
+      to_port                  = var.atlantis_port
+      protocol                 = "tcp"
+      description              = "Atlantis from Internal ALB"
+      source_security_group_id = module.alb_internal_https_sg.security_group_id # Added block to allow internal ALB access
+    },
   ]
 
   egress_rules = ["all-all"]
