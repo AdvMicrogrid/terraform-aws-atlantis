@@ -763,8 +763,9 @@ variable "internal_alb_ingress_cidr_blocks" {
   default     = ["10.4.0.0/16"]
 }
 variable "internal_certificate_arn" {
-  description = "ARN of the ACM certificate for the internal ALB"
+  description = "ARN of certificate issued by AWS ACM. If empty, a new ACM certificate will be created and validated using Route53 DNS"
   type        = string
+  default     = ""
 }
 
 variable "create_internal_route53_record" {
