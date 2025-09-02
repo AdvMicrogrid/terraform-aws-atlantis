@@ -922,7 +922,7 @@ resource "aws_ecs_service" "atlantis" {
   load_balancer {
     container_name   = var.name
     container_port   = var.atlantis_port
-    target_group_arn = element(module.alb_internal.target_group_arns, 0)
+    target_group_arn = element(module.alb_internal.target_group_arns, 1)
   }
 
   dynamic "load_balancer" {
