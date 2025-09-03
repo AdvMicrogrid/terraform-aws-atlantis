@@ -61,7 +61,7 @@ locals {
     },
     {
       name  = "ATLANTIS_ATLANTIS_URL"
-      value = local.atlantis_url_public
+      value = local.atlantis_url_internal
     },
     {
       name  = "ATLANTIS_GH_USER"
